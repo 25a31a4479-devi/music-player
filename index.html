@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraStream - AI YouTube Music Player</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for premium feel */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(31, 41, 55, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.3);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.5);
+        }
+        /* Vinyl rotation animation */
+        @keyframes rotate-vinyl {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-vinyl {
+            animation: rotate-vinyl 20s linear infinite;
+        }
+        .animate-vinyl-paused {
+            animation-play-state: paused;
+        }
+        /* Glowing effects */
+        .glow-purple {
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col overflow-hidden select-none">
+
+    <!-- App Container -->
+    <div class="flex flex-1 overflow-hidden h-screen relative">
+        
+        <!-- Left Sidebar (Navigation) -->
+        <aside class="w-64 bg-slate-900/90 border-r border-slate-800/80 flex flex-col justify-between hidden md:flex z-10 backdrop-blur-md">
+            <div class="p-6">
+                <!-- App Logo -->
+                <div class="flex items-center gap-3 mb-8 cursor-pointer" onclick="switchTab('home')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                        <i class="fa-solid fa-wand-magic-sparkles text-lg text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-purple-400">AuraStream</h1>
+                        <span class="text-[10px] font-bold tracking-widest text-purple-400 uppercase">AI Music Engine</span>
+                    </div>
+                </div>
+
+                <!-- Nav Menu -->
+                <nav class="space-y-1">
+                    <button onclick="switchTab('home')" id="nav-home" class="nav-btn w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 bg-purple-600/10 text-purple-400 border border-purple-500/10">
+                        <i class="fa-solid fa-house text-lg"></i>
+                        <span>Home / Discover</span>
+                    </button>
+                    <button onclick="switchTab('search')" id="nav-search" class="nav-btn w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-100 hover:bg-slate-800/50">
+                        <i class="fa-solid fa-magnifying-glass text-lg"></i>
+                        <span>Search Songs</span>
+                    </button>
+                    <button onclick="switchTab('ai-dj')" id="nav-ai-dj" class="nav-btn w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-100 hover:bg-slate-800/50">
+                        <i class="fa-solid fa-compact-disc text-lg"></i>
+                        <span>AI Vibe DJ</span>
+                    </button>
+                    <button onclick="switchTab('lyrics')" id="nav-lyrics" class="nav-btn w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-100 hover:bg-slate-800/50">
+                        <i class="fa-solid fa-quote-right text-lg"></i>
+                        <span>AI Lyrics</span>
+                    </button>
+                    <button onclick="switchTab('library')" id="nav-library" class="nav-btn w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-100 hover:bg-slate-800/50">
+                        <i class="fa-solid fa-heart text-lg"></i>
+                        <span>My Library</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Custom URL Quick Import -->
+            <div class="p-6 border-t border-slate-800/60 bg-slate-950/40">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Load YouTube Link</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="direct-yt-url" placeholder="Paste URL..." class="bg-slate-800/80 text-xs rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-1 focus:ring-purple-500 border border-slate-700/50 text-slate-300">
+                    <button onclick="loadDirectUrl()" class="bg-purple-600 hover:bg-purple-500 transition-colors px-3 py-2 rounded-lg text-xs font-medium text-white flex items-center justify-center">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Panel Content -->
+        <main class="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950">
+            <!-- Header (Mobile menu & Quick controls) -->
+            <header class="h-16 px-6 border-b border-slate-800/60 flex items-center justify-between md:justify-end gap-4 bg-slate-900/40 backdrop-blur-sm">
+                <!-- Mobile Logo and hamburger -->
+                <div class="flex items-center gap-3 md:hidden">
+                    <button onclick="toggleMobileSidebar()" class="text-slate-400 hover:text-slate-100 focus:outline-none">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <span class="text-md font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-purple-400">AuraStream</span>
+                </div>
+
+                <!-- API Key Status and connection status indicator -->
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 bg-slate-800/60 border border-slate-700/50 rounded-full px-4 py-1.5 text-xs font-medium">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="text-slate-300">AuraEngine Connected</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Container with Tabs -->
+            <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 relative">
+                
+                <!-- HOME TAB -->
+                <div id="tab-home" class="tab-content space-y-8">
+                    <!-- Elegant Hero Banner -->
+                    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-900/60 via-indigo-950/60 to-slate-900 border border-purple-500/10 p-8 md:p-12 flex flex-col justify-center min-h-[220px]">
+                        <div class="absolute -right-20 -top-20 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+                        <div class="absolute -left-10 -bottom-10 w-60 h-60 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+                        
+                        <span class="text-xs font-bold uppercase tracking-widest text-purple-400 mb-2">Welcome to AuraStream</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-3 max-w-xl font-['Playfair_Display']">
+                            Let your mood dictate the music.
+                        </h2>
+                        <p class="text-slate-300 text-sm max-w-lg mb-6">
+                            Powered by Gemini Grounded Search, fetch any video directly from YouTube to craft your custom spatial audio journey. Try creating an AI playlist!
+                        </p>
+                        <div class="flex flex-wrap gap-3">
+                            <button onclick="switchTab('ai-dj')" class="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-xl text-xs font-bold text-white shadow-lg shadow-purple-500/20 transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-compact-disc animate-spin"></i> Generate Vibe Playlist
+                            </button>
+                            <button onclick="switchTab('search')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-100 transition-all border border-slate-700">
+                                Browse Catalogue
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pre-curated Popular Vibes -->
+                    <div>
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-fire text-amber-500"></i> Preset Sonic Environments
+                        </h3>
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="preset-vibes-container">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Recent Searches/Plays -->
+                    <div id="recent-container" class="hidden">
+                        <h3 class="text-lg font-bold text-white mb-4">Recently Listened</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="recent-list">
+                            <!-- Dynamically loaded tracks -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEARCH TAB -->
+                <div id="tab-search" class="tab-content hidden space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white tracking-tight mb-2">Grounded YouTube Search</h2>
+                        <p class="text-xs text-slate-400">Search is live grounded using Google Search to return valid YouTube video matches instantly.</p>
+                    </div>
+
+                    <!-- Search Input Bar -->
+                    <form onsubmit="handleSearch(event)" class="relative flex gap-3 max-w-2xl">
+                        <div class="relative flex-1">
+                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="search-input" placeholder="Search for songs, artists, covers, mixes..." class="w-full bg-slate-900/80 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder-slate-500">
+                        </div>
+                        <button type="submit" class="px-6 py-4 bg-purple-600 hover:bg-purple-500 rounded-2xl text-sm font-bold text-white shadow-lg shadow-purple-500/20 transition-all flex items-center gap-2 whitespace-nowrap">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> AI Search
+                        </button>
+                    </form>
+
+                    <!-- Search Loading / Status State -->
+                    <div id="search-loading" class="hidden flex flex-col items-center justify-center py-16 space-y-4">
+                        <div class="relative w-16 h-16">
+                            <div class="absolute inset-0 rounded-full border-4 border-purple-500/20"></div>
+                            <div class="absolute inset-0 rounded-full border-4 border-t-purple-500 animate-spin"></div>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm font-semibold text-slate-200">Consulting YouTube Index via Gemini...</p>
+                            <p class="text-xs text-slate-500">Searching web for matching, valid video IDs</p>
+                        </div>
+                    </div>
+
+                    <!-- Search Results Grid -->
+                    <div id="search-results-section" class="hidden space-y-4">
+                        <h3 class="text-md font-bold text-slate-300">Live Search Results</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="search-results">
+                            <!-- Populated with search cards -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI VIBE DJ TAB -->
+                <div id="tab-ai-dj" class="tab-content hidden space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white tracking-tight mb-2">AI Vibe Architect</h2>
+                        <p class="text-xs text-slate-400">Describe a vibe, state of mind, setting, or custom music mix. Gemini will source 5 genuine YouTube links dynamically matching that scene.</p>
+                    </div>
+
+                    <!-- Prompt Box -->
+                    <div class="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 md:p-8 space-y-6">
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-purple-400 uppercase tracking-widest">Design Your Mood</label>
+                            <textarea id="vibe-prompt" rows="3" placeholder="Examples: 
+- Lofi study music with crackling fireplace vibes
+- 90s hip hop mixes for cooking dinner
+- High energy phonk for heavy gym lifting" class="w-full bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all placeholder-slate-600"></textarea>
+                        </div>
+
+                        <!-- Generation Button -->
+                        <button onclick="generateVibePlaylist()" class="w-full md:w-auto px-8 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-xl text-xs font-bold text-white shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Forge Playlist
+                        </button>
+                    </div>
+
+                    <!-- Playlist loading status -->
+                    <div id="dj-loading" class="hidden flex flex-col items-center justify-center py-12 space-y-4">
+                        <div class="relative w-16 h-16">
+                            <div class="absolute inset-0 rounded-full border-4 border-indigo-500/20"></div>
+                            <div class="absolute inset-0 rounded-full border-4 border-t-indigo-500 animate-spin"></div>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm font-semibold text-slate-200">Gemini DJ curating matching tracks...</p>
+                            <p class="text-xs text-slate-500">Searching web database for matching video targets</p>
+                        </div>
+                    </div>
+
+                    <!-- DJ Generated Playlist Preview -->
+                    <div id="dj-results-section" class="hidden space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-md font-bold text-slate-300">Curated DJ Setlist</h3>
+                            <button onclick="playAllDJTracks()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-xl text-xs font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-play"></i> Load All to Queue
+                            </button>
+                        </div>
+                        <div class="space-y-2" id="dj-playlist-items">
+                            <!-- Populated with list items -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LYRICS TAB -->
+                <div id="tab-lyrics" class="tab-content hidden space-y-6">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-extrabold text-white tracking-tight mb-2">Synchronized AI Lyrics</h2>
+                            <p class="text-xs text-slate-400">Instantly generate stylized lyrics for the currently playing song.</p>
+                        </div>
+                        <button onclick="fetchLyrics()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 rounded-xl text-xs font-bold transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-arrows-rotate"></i> Fetch / Refresh Lyrics
+                        </button>
+                    </div>
+
+                    <!-- Lyrics Workspace -->
+                    <div class="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 md:p-12 min-h-[400px] flex flex-col items-center justify-center relative overflow-hidden">
+                        <!-- Background graphic glow -->
+                        <div class="absolute w-72 h-72 bg-purple-600/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                        <!-- Main lyrics display target -->
+                        <div id="lyrics-display" class="relative z-10 w-full max-w-xl text-center space-y-6 select-text">
+                            <!-- Initial prompt text -->
+                            <div class="space-y-3">
+                                <i class="fa-solid fa-quote-right text-4xl text-purple-500/20"></i>
+                                <p class="text-slate-400 font-medium">No song is playing, or lyrics are not loaded.</p>
+                                <p class="text-xs text-slate-600">Start playing a track, then hit 'Fetch Lyrics' to generate them.</p>
+                            </div>
+                        </div>
+
+                        <!-- Lyrics generating/loading -->
+                        <div id="lyrics-loading" class="hidden flex flex-col items-center justify-center space-y-4">
+                            <i class="fa-solid fa-circle-notch animate-spin text-3xl text-purple-500"></i>
+                            <p class="text-sm font-semibold text-slate-300">Parsing and formatting track vocals...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LIBRARY TAB -->
+                <div id="tab-library" class="tab-content hidden space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white tracking-tight mb-2">My Sonic Treasury</h2>
+                        <p class="text-xs text-slate-400">Your curated tracks, kept secure in local sandbox storage.</p>
+                    </div>
+
+                    <!-- Track table/grid -->
+                    <div class="bg-slate-900/40 border border-slate-800/60 rounded-3xl overflow-hidden">
+                        <div id="library-empty" class="p-12 text-center flex flex-col items-center justify-center space-y-4">
+                            <div class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
+                                <i class="fa-solid fa-heart text-2xl text-slate-600"></i>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="text-slate-300 font-semibold">Your Library is empty</p>
+                                <p class="text-xs text-slate-500 max-w-xs">Click the heart icon on any song detail, or import your custom tracks to collect them.</p>
+                            </div>
+                        </div>
+
+                        <div id="library-list-container" class="hidden divide-y divide-slate-800/40">
+                            <!-- Populated with saved tracks -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- Right Panel (Interactive Playlist Queue) -->
+        <aside id="queue-panel" class="w-80 bg-slate-900/90 border-l border-slate-800/80 flex flex-col justify-between hidden lg:flex z-10 backdrop-blur-md">
+            <!-- Header -->
+            <div class="p-6 border-b border-slate-800/60 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-list-ul text-purple-400"></i>
+                    <h3 class="font-bold text-slate-200">Play Queue</h3>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="clearQueue()" class="text-xs font-semibold text-slate-500 hover:text-rose-400 transition-colors">Clear</button>
+                </div>
+            </div>
+
+            <!-- Queue Scroll Container -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-2" id="queue-items-container">
+                <!-- Tracks are injected dynamically -->
+            </div>
+
+            <!-- YouTube Video Monitor (PIP View) -->
+            <div class="p-4 border-t border-slate-800/60 bg-slate-950/60 relative">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Video Stream</span>
+                    <button onclick="toggleVideoSize()" class="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+                        <i class="fa-solid fa-expand"></i> Resize
+                    </button>
+                </div>
+                <!-- Mini Iframe Box (Must be present in DOM and visible for YouTube player API controls) -->
+                <div id="video-wrapper" class="w-full aspect-video bg-black rounded-xl overflow-hidden relative border border-slate-800 transition-all duration-300">
+                    <div id="youtube-player-placeholder"></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Bottom Playback Control Bar -->
+    <footer class="h-24 bg-slate-900/95 border-t border-slate-800/80 px-4 md:px-8 flex items-center justify-between z-20 backdrop-blur-xl relative">
+        
+        <!-- Track Details Left -->
+        <div class="flex items-center gap-4 w-1/3 min-w-0">
+            <!-- Vinyl / Thumbnail art -->
+            <div class="relative w-14 h-14 rounded-xl overflow-hidden bg-slate-800 flex-shrink-0 border border-slate-700/50 shadow-md">
+                <img id="player-thumb" src="https://placehold.co/100x100/1e293b/a855f7?text=Aura" alt="Cover" class="w-full h-full object-cover animate-vinyl animate-vinyl-paused">
+                <div class="absolute inset-0 bg-black/20 flex items-center justify-center">
+                    <div class="w-3 h-3 rounded-full bg-slate-950 border border-slate-800"></div>
+                </div>
+            </div>
+            <!-- Track Meta info -->
+            <div class="min-w-0">
+                <h4 id="player-title" class="text-sm font-bold text-slate-100 truncate">No Track Selected</h4>
+                <p id="player-artist" class="text-xs text-slate-400 truncate">Choose a song to begin playing</p>
+            </div>
+            <!-- Heart Fav Track -->
+            <button onclick="toggleFavoriteCurrentTrack()" id="player-fav-btn" class="text-slate-500 hover:text-rose-500 transition-colors flex-shrink-0 p-1">
+                <i class="fa-regular fa-heart text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Central Controller Core -->
+        <div class="flex flex-col items-center gap-1.5 w-1/3">
+            <div class="flex items-center gap-6">
+                <!-- Shuffle -->
+                <button onclick="toggleShuffle()" id="player-shuffle" class="text-slate-400 hover:text-purple-400 transition-colors text-sm" title="Shuffle">
+                    <i class="fa-solid fa-shuffle"></i>
+                </button>
+                <!-- Prev -->
+                <button onclick="playPrevTrack()" class="text-slate-300 hover:text-white transition-colors text-lg" title="Previous">
+                    <i class="fa-solid fa-backward-step"></i>
+                </button>
+                <!-- Play / Pause -->
+                <button onclick="togglePlayPause()" id="player-play-pause" class="w-12 h-12 rounded-full bg-white hover:bg-purple-100 text-slate-950 flex items-center justify-center shadow-lg transition-all transform hover:scale-105" title="Play">
+                    <i class="fa-solid fa-play text-lg pl-0.5"></i>
+                </button>
+                <!-- Next -->
+                <button onclick="playNextTrack()" class="text-slate-300 hover:text-white transition-colors text-lg" title="Next">
+                    <i class="fa-solid fa-forward-step"></i>
+                </button>
+                <!-- Repeat -->
+                <button onclick="toggleRepeat()" id="player-repeat" class="text-slate-400 hover:text-purple-400 transition-colors text-sm" title="Repeat">
+                    <i class="fa-solid fa-repeat"></i>
+                </button>
+            </div>
+
+            <!-- Custom Timeline slider -->
+            <div class="flex items-center gap-3 w-full max-w-md">
+                <span id="player-current-time" class="text-[10px] font-medium text-slate-500 w-10 text-right">0:00</span>
+                <div class="relative flex-1 group py-2 cursor-pointer" onclick="handleSeek(event)">
+                    <!-- Back Track -->
+                    <div class="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <!-- Highlighted progress -->
+                        <div id="player-progress-bar" class="h-full bg-gradient-to-r from-purple-500 to-indigo-500 w-0 transition-all duration-100"></div>
+                    </div>
+                    <!-- Handle Knob -->
+                    <div id="player-progress-knob" class="absolute h-3 w-3 rounded-full bg-white top-1/2 -translate-y-1/2 -translate-x-1/2 left-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg shadow-purple-500/50"></div>
+                </div>
+                <span id="player-total-time" class="text-[10px] font-medium text-slate-500 w-10">0:00</span>
+            </div>
+        </div>
+
+        <!-- Right Volume & Utilities -->
+        <div class="flex items-center justify-end gap-4 w-1/3">
+            <!-- Lyrics quick nav -->
+            <button onclick="switchTab('lyrics')" class="text-slate-400 hover:text-white transition-colors" title="Lyrics">
+                <i class="fa-solid fa-quote-right"></i>
+            </button>
+            <!-- Toggle Queue pane on desktop -->
+            <button onclick="toggleQueuePanel()" class="text-slate-400 hover:text-white transition-colors hidden lg:block" title="Queue">
+                <i class="fa-solid fa-list-ul"></i>
+            </button>
+
+            <!-- Volume Container -->
+            <div class="flex items-center gap-2 group max-w-[120px]">
+                <button onclick="toggleMute()" id="volume-icon" class="text-slate-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+                <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="handleVolumeChange(this.value)" class="w-20 accent-purple-500 h-1 bg-slate-800 rounded-lg cursor-pointer appearance-none">
+            </div>
+        </div>
+
+    </footer>
+
+    <!-- Mobile Navigation Panel -->
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-64 bg-slate-900 border-r border-slate-800 z-50 transform -translate-x-full transition-transform duration-300 md:hidden flex flex-col justify-between">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
+                        <i class="fa-solid fa-wand-magic-sparkles text-white"></i>
+                    </div>
+                    <span class="font-extrabold text-white">AuraStream</span>
+                </div>
+                <button onclick="toggleMobileSidebar()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <nav class="space-y-1">
+                <button onclick="switchTab('home'); toggleMobileSidebar()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Home</span>
+                </button>
+                <button onclick="switchTab('search'); toggleMobileSidebar()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Search</span>
+                </button>
+                <button onclick="switchTab('ai-dj'); toggleMobileSidebar()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">
+                    <i class="fa-solid fa-compact-disc"></i>
+                    <span>AI Vibe DJ</span>
+                </button>
+                <button onclick="switchTab('lyrics'); toggleMobileSidebar()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">
+                    <i class="fa-solid fa-quote-right"></i>
+                    <span>AI Lyrics</span>
+                </button>
+                <button onclick="switchTab('library'); toggleMobileSidebar()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">
+                    <i class="fa-solid fa-heart"></i>
+                    <span>My Library</span>
+                </button>
+            </nav>
+        </div>
+        <div class="p-6 border-t border-slate-800/80 bg-slate-950/20">
+            <p class="text-[10px] text-slate-500 text-center">AuraStream AI player v1.1</p>
+        </div>
+    </div>
+    <!-- Overlay cover for mobile menu -->
+    <div id="mobile-sidebar-overlay" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden md:hidden"></div>
+
+    <!-- YouTube Playback Engine Script & APIs -->
+    <script>
+        // Load YouTube Iframe Player API asynchronously
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        // Core Global Player States
+        let playerState = {
+            ytPlayer: null,
+            isPlaying: false,
+            queue: [],
+            currentIndex: -1,
+            isMuted: false,
+            volume: 80,
+            isShuffle: false,
+            isRepeat: 'none', // 'none' | 'one' | 'all'
+            favorites: JSON.parse(localStorage.getItem('aurastream_favorites') || '[]'),
+            recentList: JSON.parse(localStorage.getItem('aurastream_recents') || '[]'),
+            timelineInterval: null
+        };
+
+        // UI Configurations for Preset Vibes
+        const presetVibes = [
+            { title: "Retro Synthwave", artist: "Mitch Murder, Kavinsky, Lazerhawk Vibes", videoId: "4xDzrJKXOOY", thumbnail: "https://img.youtube.com/vi/4xDzrJKXOOY/mqdefault.jpg" },
+            { title: "Midnight Lo-fi Beats", artist: "Chill Study & Relaxing Instrumentals", videoId: "jfKfPfyJRdk", thumbnail: "https://img.youtube.com/vi/jfKfPfyJRdk/mqdefault.jpg" },
+            { title: "Acoustic Coffeehouse", artist: "Relaxing Acoustic Guitar covers", videoId: "m3p_ZIdXNKA", thumbnail: "https://img.youtube.com/vi/m3p_ZIdXNKA/mqdefault.jpg" },
+            { title: "Deep Focus Ambient", artist: "Binaural Waves & Cyberpunk Coding Beats", videoId: "5_672rYdO9E", thumbnail: "https://img.youtube.com/vi/5_672rYdO9E/mqdefault.jpg" }
+        ];
+
+        // Ensure elements load properly on DOM load
+        window.onload = function() {
+            renderPresetVibes();
+            renderRecents();
+            renderFavorites();
+            initializeVolumeSlider();
+        };
+
+        // Triggers once YouTube API finishes loading
+        function onYouTubeIframeAPIReady() {
+            playerState.ytPlayer = new YT.Player('youtube-player-placeholder', {
+                height: '100%',
+                width: '100%',
+                videoId: presetVibes[0].videoId, // Load first preset video as baseline placeholder
+                playerVars: {
+                    'autoplay': 0,
+                    'controls': 0,
+                    'disablekb': 1,
+                    'fs': 0,
+                    'rel': 0,
+                    'modestbranding': 1,
+                    'origin': window.location.origin
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        // Fired when YouTube player fully mounts
+        function onPlayerReady(event) {
+            console.log("YouTube customized playback framework ready.");
+            event.target.setVolume(playerState.volume);
+        }
+
+        // Fired whenever player state changes (e.g. video ended, paused)
+        function onPlayerStateChange(event) {
+            // Track state mappings of YouTube API:
+            // YT.PlayerState.PLAYING (1), YT.PlayerState.PAUSED (2), YT.PlayerState.ENDED (0)
+            if (event.data === YT.PlayerState.PLAYING) {
+                playerState.isPlaying = true;
+                updatePlaybackControlsUI(true);
+                startTimelineTracker();
+            } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.BUFFERING) {
+                playerState.isPlaying = false;
+                updatePlaybackControlsUI(false);
+                clearInterval(playerState.timelineInterval);
+            } else if (event.data === YT.PlayerState.ENDED) {
+                playerState.isPlaying = false;
+                updatePlaybackControlsUI(false);
+                clearInterval(playerState.timelineInterval);
+                handleTrackEnded();
+            }
+        }
+
+        // Base API caller function with exponential backoff for premium resilience
+        async function fetchGemini(userQuery, systemInstruction = "", useSearch = false, jsonSchema = null) {
+            const apiKey = ""; // Canvas framework injects key at runtime when left empty
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+            };
+
+            if (systemInstruction) {
+                payload.systemInstruction = {
+                    parts: [{ text: systemInstruction }]
+                };
+            }
+
+            if (useSearch) {
+                payload.tools = [{ "google_search": {} }];
+            }
+
+            if (jsonSchema) {
+                payload.generationConfig = {
+                    responseMimeType: "application/json",
+                    responseSchema: jsonSchema
+                };
+            }
+
+            // Perform robust fetch call using exponential backoff
+            let delay = 1000;
+            const maxRetries = 3;
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.status === 429) {
+                        // Rate limit fallback
+                        await new Promise(res => setTimeout(res, delay));
+                        delay *= 2;
+                        continue;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`Gemini API Error: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    return text || "";
+                } catch (error) {
+                    if (attempt === maxRetries - 1) {
+                        console.error("Gemini connection error:", error);
+                        throw error;
+                    }
+                    await new Promise(res => setTimeout(res, delay));
+                    delay *= 2;
+                }
+            }
+            return "";
+        }
+
+        // Perform an interactive search query using Gemini grounded indexing
+        async function handleSearch(event) {
+            event.preventDefault();
+            const query = document.getElementById('search-input').value.trim();
+            if (!query) return;
+
+            const resultsContainer = document.getElementById('search-results');
+            const searchLoading = document.getElementById('search-loading');
+            const searchResultsSection = document.getElementById('search-results-section');
+
+            // Toggle loading indicators
+            searchLoading.classList.remove('hidden');
+            searchResultsSection.classList.add('hidden');
+            resultsContainer.innerHTML = '';
+
+            const systemPrompt = `You are a dynamic music assistant. Your job is to search the web and compile a list of YouTube music videos related to the user query.
+            You must provide exactly 6 items in a strictly formatted JSON array.
+            Use Google Search to locate real, playable, and active YouTube video IDs. Ensure the video IDs match actual titles.`;
+
+            const userPrompt = `Search for YouTube videos matching: "${query}". Format as a JSON array of tracks. Each track object must have fields: "title", "channel", "videoId", and "thumbnail". Set thumbnail strictly as "https://img.youtube.com/vi/{{videoId}}/mqdefault.jpg".`;
+
+            const schema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        title: { type: "STRING" },
+                        channel: { type: "STRING" },
+                        videoId: { type: "STRING" },
+                        thumbnail: { type: "STRING" }
+                    },
+                    required: ["title", "channel", "videoId", "thumbnail"]
+                }
+            };
+
+            try {
+                const responseJsonText = await fetchGemini(userPrompt, systemPrompt, true, schema);
+                const tracks = JSON.parse(responseJsonText);
+
+                searchLoading.classList.add('hidden');
+                searchResultsSection.classList.remove('hidden');
+
+                if (tracks && tracks.length > 0) {
+                    tracks.forEach(track => {
+                        const card = createSearchTrackCard(track);
+                        resultsContainer.appendChild(card);
+                    });
+                } else {
+                    resultsContainer.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400">No results found. Please try a different query.</div>`;
+                }
+            } catch (err) {
+                console.error("Search failure:", err);
+                searchLoading.classList.add('hidden');
+                searchResultsSection.classList.remove('hidden');
+                resultsContainer.innerHTML = `
+                    <div class="col-span-full py-8 text-center space-y-4">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-500 text-3xl"></i>
+                        <p class="text-slate-300 text-sm">Failed to retrieve YouTube indexed results. Try again in a few seconds.</p>
+                    </div>`;
+            }
+        }
+
+        // Helper to output premium card layouts for searches
+        function createSearchTrackCard(track) {
+            const card = document.createElement('div');
+            card.className = "bg-slate-900/40 border border-slate-800/80 rounded-2xl p-4 flex gap-4 hover:bg-slate-800/40 hover:border-slate-700/60 transition-all group relative cursor-pointer";
+            card.onclick = () => loadTrackToPlayer(track, true);
+
+            card.innerHTML = `
+                <div class="relative w-20 h-20 rounded-xl overflow-hidden bg-slate-800 flex-shrink-0">
+                    <img src="${track.thumbnail}" alt="Thumb" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <span class="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-lg"><i class="fa-solid fa-play pl-0.5"></i></span>
+                    </div>
+                </div>
+                <div class="min-w-0 flex-1 flex flex-col justify-between">
+                    <div>
+                        <h4 class="font-bold text-sm text-slate-100 truncate group-hover:text-purple-400 transition-colors">${track.title}</h4>
+                        <p class="text-xs text-slate-400 truncate">${track.channel}</p>
+                    </div>
+                    <div class="flex justify-end gap-2" onclick="event.stopPropagation()">
+                        <button onclick='addTrackToQueue(${JSON.stringify(track).replace(/'/g, "&apos;")})' class="text-xs font-semibold text-slate-400 hover:text-white bg-slate-800/60 border border-slate-700/40 hover:bg-purple-600 hover:border-purple-500 rounded-lg px-2.5 py-1 transition-all">
+                            + Queue
+                        </button>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        // Handlers to build a vibe playlist using Gemini
+        async function generateVibePlaylist() {
+            const prompt = document.getElementById('vibe-prompt').value.trim();
+            if (!prompt) return;
+
+            const resultsSection = document.getElementById('dj-results-section');
+            const itemsContainer = document.getElementById('dj-playlist-items');
+            const loading = document.getElementById('dj-loading');
+
+            loading.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+            itemsContainer.innerHTML = '';
+
+            const systemPrompt = `You are a professional music festival DJ and mood architect.
+            Analyze the user's vibe/mood specification and return exactly 5 songs/tracks that perfectly capture that environment.
+            You must run real Google Searches to identify actual, valid YouTube video IDs for these tracks.
+            Do not make up IDs. Ensure you return a real valid playable list formatted in a strict JSON array.`;
+
+            const userPrompt = `Generate a playlist for: "${prompt}". Respond with a JSON array of 5 objects. Each object must have "title", "channel", "videoId", and "thumbnail" ("https://img.youtube.com/vi/{{videoId}}/mqdefault.jpg").`;
+
+            const schema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        title: { type: "STRING" },
+                        channel: { type: "STRING" },
+                        videoId: { type: "STRING" },
+                        thumbnail: { type: "STRING" }
+                    },
+                    required: ["title", "channel", "videoId", "thumbnail"]
+                }
+            };
+
+            try {
+                const responseJsonText = await fetchGemini(userPrompt, systemPrompt, true, schema);
+                const tracks = JSON.parse(responseJsonText);
+
+                loading.classList.add('hidden');
+                resultsSection.classList.remove('hidden');
+
+                if (tracks && tracks.length > 0) {
+                    // Stash generated playlist globally so users can queue all
+                    window.lastDjSet = tracks;
+
+                    tracks.forEach((track, i) => {
+                        const item = document.createElement('div');
+                        item.className = "flex items-center justify-between p-3 bg-slate-900/30 hover:bg-slate-800/30 border border-slate-800/40 rounded-xl transition-all cursor-pointer";
+                        item.onclick = () => loadTrackToPlayer(track, true);
+
+                        item.innerHTML = `
+                            <div class="flex items-center gap-4 min-w-0">
+                                <span class="text-xs font-bold text-indigo-400 w-4">${i + 1}</span>
+                                <img src="${track.thumbnail}" alt="Cover" class="w-10 h-10 rounded-lg object-cover bg-slate-800">
+                                <div class="min-w-0">
+                                    <h4 class="text-sm font-bold text-slate-100 truncate">${track.title}</h4>
+                                    <p class="text-xs text-slate-400 truncate">${track.channel}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+                                <button onclick='addTrackToQueue(${JSON.stringify(track).replace(/'/g, "&apos;")})' class="p-2 text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-indigo-600 rounded-lg transition-all" title="Add to queue">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+                        `;
+                        itemsContainer.appendChild(item);
+                    });
+                } else {
+                    itemsContainer.innerHTML = `<p class="text-center text-slate-400 py-6">Could not construct vibe tracks. Try another vibe.</p>`;
+                }
+            } catch (err) {
+                console.error("DJ generation failure:", err);
+                loading.classList.add('hidden');
+                resultsSection.classList.remove('hidden');
+                itemsContainer.innerHTML = `
+                    <div class="text-center py-8 space-y-3">
+                        <i class="fa-solid fa-compact-disc text-rose-500 text-3xl animate-spin"></i>
+                        <p class="text-slate-300 text-sm">Failed to generate AI mood. Try another setting.</p>
+                    </div>`;
+            }
+        }
+
+        // Queue all loaded AI DJ tracks instantly
+        function playAllDJTracks() {
+            if (window.lastDjSet && window.lastDjSet.length > 0) {
+                window.lastDjSet.forEach(track => addTrackToQueue(track));
+                showToast("Added all setlist tracks to Queue!");
+            }
+        }
+
+        // Generate AI formatted lyrics using Gemini
+        async function fetchLyrics() {
+            if (playerState.currentIndex === -1) {
+                showToast("Please play a song first!");
+                return;
+            }
+
+            const currentTrack = playerState.queue[playerState.currentIndex];
+            const lyricsDisplay = document.getElementById('lyrics-display');
+            const loading = document.getElementById('lyrics-loading');
+
+            lyricsDisplay.classList.add('hidden');
+            loading.classList.remove('hidden');
+
+            const systemPrompt = `You are a professional music archivist. 
+            Search for and return accurate lyrics for the song specified by the user. 
+            Format the response with clean spacing, separating verses with newlines. 
+            Add a gentle, stylistic intro matching the tone. Include occasional emotion/vocal directions (e.g., [Soft Intro], [Chorus]).`;
+
+            const userPrompt = `Provide lyrics for "${currentTrack.title}" by "${currentTrack.channel}". Ensure lyrics match actual song.`;
+
+            try {
+                const lyrics = await fetchGemini(userPrompt, systemPrompt, false);
+                loading.classList.add('hidden');
+                lyricsDisplay.classList.remove('hidden');
+
+                if (lyrics) {
+                    // Render line breaks cleanly
+                    const formatted = lyrics.replace(/\n/g, '<br>');
+                    lyricsDisplay.innerHTML = `
+                        <div class="space-y-4">
+                            <h3 class="text-xl font-black text-white">${currentTrack.title}</h3>
+                            <p class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-8">Metadata Powered Lyrics</p>
+                            <div class="text-slate-300 text-md leading-relaxed select-text space-y-4 max-h-[500px] overflow-y-auto px-4 py-2 bg-slate-950/20 rounded-2xl border border-slate-800/40">
+                                ${formatted}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    lyricsDisplay.innerHTML = `<p class="text-slate-400">Failed to generate lyrics. Try refreshing.</p>`;
+                }
+            } catch (err) {
+                console.error("Lyrics pull failure:", err);
+                loading.classList.add('hidden');
+                lyricsDisplay.classList.remove('hidden');
+                lyricsDisplay.innerHTML = `<p class="text-rose-400">Unable to reach AI Vocals index. Refresh to retry.</p>`;
+            }
+        }
+
+        // Load a target track object directly into the player context
+        function loadTrackToPlayer(track, autoplay = true) {
+            // Check if track is already in queue; if not, add it
+            let queueIndex = playerState.queue.findIndex(t => t.videoId === track.videoId);
+            if (queueIndex === -1) {
+                playerState.queue.push(track);
+                queueIndex = playerState.queue.length - 1;
+            }
+
+            playerState.currentIndex = queueIndex;
+            
+            // Render playback track card updates
+            document.getElementById('player-title').innerText = track.title;
+            document.getElementById('player-artist').innerText = track.channel;
+            document.getElementById('player-thumb').src = track.thumbnail;
+            
+            // Handle active selection highlighting in Queue panel
+            renderQueueUI();
+
+            // Save to Local Recents Cache
+            saveToRecents(track);
+
+            // Load and run in YouTube API iframe
+            if (playerState.ytPlayer) {
+                playerState.ytPlayer.loadVideoById(track.videoId);
+                if (!autoplay) {
+                    playerState.ytPlayer.pauseVideo();
+                } else {
+                    playerState.isPlaying = true;
+                    updatePlaybackControlsUI(true);
+                }
+            }
+
+            updateFavoriteHeartUI();
+            
+            // Automatically trigger dynamic lyrics pre-load
+            if (document.getElementById('tab-lyrics').classList.contains('hidden') === false) {
+                fetchLyrics();
+            }
+        }
+
+        // Queue Management
+        function addTrackToQueue(track) {
+            // Avoid duplicate tracking
+            if (!playerState.queue.some(t => t.videoId === track.videoId)) {
+                playerState.queue.push(track);
+                renderQueueUI();
+                showToast(`"${track.title.slice(0, 20)}..." added to play queue`);
+            } else {
+                showToast("Track already in queue.");
+            }
+
+            // If nothing is playing, kick off playback automatically
+            if (playerState.currentIndex === -1) {
+                loadTrackToPlayer(track, true);
+            }
+        }
+
+        // Playback central buttons logic
+        function togglePlayPause() {
+            if (!playerState.ytPlayer) return;
+
+            if (playerState.isPlaying) {
+                playerState.ytPlayer.pauseVideo();
+            } else {
+                // If nothing playing, check if there is a queue item
+                if (playerState.currentIndex === -1 && playerState.queue.length > 0) {
+                    loadTrackToPlayer(playerState.queue[0], true);
+                } else {
+                    playerState.ytPlayer.playVideo();
+                }
+            }
+        }
+
+        function playNextTrack() {
+            if (playerState.queue.length === 0) return;
+
+            if (playerState.isRepeat === 'one') {
+                // Replay exact same song
+                loadTrackToPlayer(playerState.queue[playerState.currentIndex], true);
+                return;
+            }
+
+            let nextIdx = playerState.currentIndex + 1;
+
+            if (playerState.isShuffle) {
+                nextIdx = Math.floor(Math.random() * playerState.queue.length);
+            } else if (nextIdx >= playerState.queue.length) {
+                if (playerState.isRepeat === 'all') {
+                    nextIdx = 0;
+                } else {
+                    showToast("Queue finished!");
+                    return;
+                }
+            }
+
+            loadTrackToPlayer(playerState.queue[nextIdx], true);
+        }
+
+        function playPrevTrack() {
+            if (playerState.queue.length === 0 || playerState.currentIndex <= 0) return;
+            
+            let prevIdx = playerState.currentIndex - 1;
+            loadTrackToPlayer(playerState.queue[prevIdx], true);
+        }
+
+        function handleTrackEnded() {
+            playNextTrack();
+        }
+
+        // Track visual progression
+        function startTimelineTracker() {
+            clearInterval(playerState.timelineInterval);
+            playerState.timelineInterval = setInterval(() => {
+                if (playerState.ytPlayer && playerState.isPlaying) {
+                    const currentTime = playerState.ytPlayer.getCurrentTime() || 0;
+                    const duration = playerState.ytPlayer.getDuration() || 0;
+
+                    if (duration > 0) {
+                        const progressPercent = (currentTime / duration) * 100;
+                        document.getElementById('player-progress-bar').style.width = `${progressPercent}%`;
+                        document.getElementById('player-progress-knob').style.left = `${progressPercent}%`;
+                        document.getElementById('player-current-time').innerText = formatTime(currentTime);
+                        document.getElementById('player-total-time').innerText = formatTime(duration);
+                    }
+                }
+            }, 500);
+        }
+
+        // Handle user seeking click on timeline track
+        function handleSeek(event) {
+            if (!playerState.ytPlayer) return;
+            const timeline = event.currentTarget;
+            const rect = timeline.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const width = rect.width;
+            const percentage = clickX / width;
+
+            const duration = playerState.ytPlayer.getDuration() || 0;
+            if (duration > 0) {
+                const targetTime = duration * percentage;
+                playerState.ytPlayer.seekTo(targetTime, true);
+                document.getElementById('player-progress-bar').style.width = `${percentage * 100}%`;
+                document.getElementById('player-progress-knob').style.left = `${percentage * 100}%`;
+            }
+        }
+
+        // Volume manipulation
+        function handleVolumeChange(value) {
+            playerState.volume = value;
+            if (playerState.ytPlayer) {
+                playerState.ytPlayer.setVolume(value);
+            }
+            updateVolumeIcon();
+        }
+
+        function toggleMute() {
+            if (!playerState.ytPlayer) return;
+            playerState.isMuted = !playerState.isMuted;
+            if (playerState.isMuted) {
+                playerState.ytPlayer.mute();
+                document.getElementById('volume-slider').value = 0;
+            } else {
+                playerState.ytPlayer.unmute();
+                document.getElementById('volume-slider').value = playerState.volume;
+            }
+            updateVolumeIcon();
+        }
+
+        // Toggles for Shuffle and Repeat
+        function toggleShuffle() {
+            playerState.isShuffle = !playerState.isShuffle;
+            const btn = document.getElementById('player-shuffle');
+            if (playerState.isShuffle) {
+                btn.className = "text-purple-400 hover:text-purple-300 transition-colors text-sm";
+                showToast("Shuffle Mode On");
+            } else {
+                btn.className = "text-slate-400 hover:text-purple-400 transition-colors text-sm";
+                showToast("Shuffle Mode Off");
+            }
+        }
+
+        function toggleRepeat() {
+            const btn = document.getElementById('player-repeat');
+            if (playerState.isRepeat === 'none') {
+                playerState.isRepeat = 'all';
+                btn.className = "text-purple-400 hover:text-purple-300 transition-colors text-sm";
+                showToast("Repeat All Tracks Enabled");
+            } else if (playerState.isRepeat === 'all') {
+                playerState.isRepeat = 'one';
+                btn.innerHTML = `<i class="fa-solid fa-repeat"></i><span class="text-[8px] absolute top-2 right-2 font-bold">1</span>`;
+                btn.className = "text-indigo-400 hover:text-indigo-300 transition-colors text-sm relative";
+                showToast("Repeat One Track Enabled");
+            } else {
+                playerState.isRepeat = 'none';
+                btn.innerHTML = `<i class="fa-solid fa-repeat"></i>`;
+                btn.className = "text-slate-400 hover:text-purple-400 transition-colors text-sm";
+                showToast("Repeat Disabled");
+            }
+        }
+
+        // Render preset cards on dashboard
+        function renderPresetVibes() {
+            const container = document.getElementById('preset-vibes-container');
+            container.innerHTML = '';
+            presetVibes.forEach(vibe => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-900/40 border border-slate-800/80 hover:border-purple-500/30 rounded-2xl p-4 cursor-pointer hover:bg-slate-800/30 transition-all flex flex-col gap-3 group relative";
+                card.onclick = () => {
+                    loadTrackToPlayer(vibe, true);
+                    // Add all presets to queue as default setup
+                    presetVibes.forEach(v => {
+                        if (!playerState.queue.some(q => q.videoId === v.videoId)) {
+                            playerState.queue.push(v);
+                        }
+                    });
+                    renderQueueUI();
+                };
+
+                card.innerHTML = `
+                    <div class="aspect-video w-full rounded-xl overflow-hidden bg-slate-800 relative">
+                        <img src="${vibe.thumbnail}" alt="Cover" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <span class="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-500/20"><i class="fa-solid fa-play pl-0.5 text-lg"></i></span>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm text-slate-100 truncate">${vibe.title}</h4>
+                        <p class="text-xs text-slate-400 truncate">${vibe.artist}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Queue UI renderer list
+        function renderQueueUI() {
+            const container = document.getElementById('queue-items-container');
+            container.innerHTML = '';
+
+            if (playerState.queue.length === 0) {
+                container.innerHTML = `
+                    <div class="py-12 text-center text-xs text-slate-500">
+                        Queue is empty. Find a track and hit "+ Queue".
+                    </div>`;
+                return;
+            }
+
+            playerState.queue.forEach((track, idx) => {
+                const isActive = idx === playerState.currentIndex;
+                const activeClasses = isActive ? "bg-purple-600/10 border-purple-500/30 text-purple-400" : "bg-slate-950/20 border-slate-800/40 hover:bg-slate-800/20";
+                
+                const item = document.createElement('div');
+                item.className = `flex items-center justify-between p-2.5 border rounded-xl cursor-pointer transition-all ${activeClasses}`;
+                item.onclick = () => loadTrackToPlayer(track, true);
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <img src="${track.thumbnail}" alt="Cover" class="w-8 h-8 rounded-lg object-cover bg-slate-800 flex-shrink-0">
+                        <div class="min-w-0">
+                            <h5 class="text-xs font-bold text-slate-100 truncate ${isActive ? 'text-purple-400' : ''}">${track.title}</h5>
+                            <p class="text-[10px] text-slate-400 truncate">${track.channel}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+                        <button onclick="removeTrackFromQueue(${idx})" class="p-1.5 text-slate-500 hover:text-rose-400 rounded-md transition-colors" title="Remove track">
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function removeTrackFromQueue(index) {
+            playerState.queue.splice(index, 1);
+            if (playerState.currentIndex === index) {
+                if (playerState.queue.length > 0) {
+                    loadTrackToPlayer(playerState.queue[0], true);
+                } else {
+                    playerState.currentIndex = -1;
+                    document.getElementById('player-title').innerText = "No Track Selected";
+                    document.getElementById('player-artist').innerText = "Choose a song to begin playing";
+                    document.getElementById('player-thumb').src = "https://placehold.co/100x100/1e293b/a855f7?text=Aura";
+                    if (playerState.ytPlayer) playerState.ytPlayer.stopVideo();
+                }
+            } else if (playerState.currentIndex > index) {
+                playerState.currentIndex--;
+            }
+            renderQueueUI();
+        }
+
+        function clearQueue() {
+            playerState.queue = [];
+            playerState.currentIndex = -1;
+            document.getElementById('player-title').innerText = "No Track Selected";
+            document.getElementById('player-artist').innerText = "Choose a song to begin playing";
+            document.getElementById('player-thumb').src = "https://placehold.co/100x100/1e293b/a855f7?text=Aura";
+            if (playerState.ytPlayer) playerState.ytPlayer.stopVideo();
+            renderQueueUI();
+        }
+
+        // Saves user interactions dynamically to LocalStorage sandbox
+        function saveToRecents(track) {
+            let list = playerState.recentList.filter(t => t.videoId !== track.videoId);
+            list.unshift(track);
+            if (list.length > 6) list.pop(); // Cap history length
+            playerState.recentList = list;
+            localStorage.setItem('aurastream_recents', JSON.stringify(list));
+            renderRecents();
+        }
+
+        function renderRecents() {
+            const container = document.getElementById('recent-list');
+            const box = document.getElementById('recent-container');
+            if (playerState.recentList.length === 0) {
+                box.classList.add('hidden');
+                return;
+            }
+            box.classList.remove('hidden');
+            container.innerHTML = '';
+
+            playerState.recentList.forEach(track => {
+                const item = document.createElement('div');
+                item.className = "bg-slate-900/40 border border-slate-800/80 hover:border-purple-500/20 rounded-2xl p-3 flex gap-3 cursor-pointer hover:bg-slate-800/20 transition-all group";
+                item.onclick = () => loadTrackToPlayer(track, true);
+
+                item.innerHTML = `
+                    <img src="${track.thumbnail}" alt="Cover" class="w-12 h-12 rounded-xl object-cover bg-slate-800 flex-shrink-0">
+                    <div class="min-w-0 flex-1 flex flex-col justify-center">
+                        <h4 class="font-bold text-xs text-slate-100 truncate group-hover:text-purple-400 transition-colors">${track.title}</h4>
+                        <p class="text-[10px] text-slate-400 truncate">${track.channel}</p>
+                    </div>
+                    <div class="flex items-center px-2">
+                        <i class="fa-solid fa-play text-xs text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // Favorites Handling
+        function toggleFavoriteCurrentTrack() {
+            if (playerState.currentIndex === -1) return;
+            const track = playerState.queue[playerState.currentIndex];
+            const isFav = playerState.favorites.some(t => t.videoId === track.videoId);
+
+            if (isFav) {
+                playerState.favorites = playerState.favorites.filter(t => t.videoId !== track.videoId);
+                showToast("Removed from Library");
+            } else {
+                playerState.favorites.push(track);
+                showToast("Added to Library!");
+            }
+
+            localStorage.setItem('aurastream_favorites', JSON.stringify(playerState.favorites));
+            updateFavoriteHeartUI();
+            renderFavorites();
+        }
+
+        function updateFavoriteHeartUI() {
+            const btn = document.getElementById('player-fav-btn');
+            if (playerState.currentIndex === -1) {
+                btn.innerHTML = `<i class="fa-regular fa-heart text-lg text-slate-500"></i>`;
+                return;
+            }
+            const track = playerState.queue[playerState.currentIndex];
+            const isFav = playerState.favorites.some(t => t.videoId === track.videoId);
+            if (isFav) {
+                btn.innerHTML = `<i class="fa-solid fa-heart text-lg text-rose-500 animate-pulse"></i>`;
+            } else {
+                btn.innerHTML = `<i class="fa-regular fa-heart text-lg text-slate-400 hover:text-rose-500"></i>`;
+            }
+        }
+
+        function renderFavorites() {
+            const container = document.getElementById('library-list-container');
+            const emptyState = document.getElementById('library-empty');
+
+            if (playerState.favorites.length === 0) {
+                emptyState.classList.remove('hidden');
+                container.classList.add('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            container.classList.remove('hidden');
+            container.innerHTML = '';
+
+            playerState.favorites.forEach((track, i) => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-4 hover:bg-slate-800/10 transition-all cursor-pointer group";
+                item.onclick = () => loadTrackToPlayer(track, true);
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-4 min-w-0">
+                        <span class="text-xs font-bold text-slate-500 w-4">${i + 1}</span>
+                        <img src="${track.thumbnail}" alt="Cover" class="w-11 h-11 rounded-xl object-cover bg-slate-800 flex-shrink-0">
+                        <div class="min-w-0">
+                            <h4 class="text-sm font-bold text-slate-100 truncate group-hover:text-purple-400 transition-colors">${track.title}</h4>
+                            <p class="text-xs text-slate-400 truncate">${track.channel}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4" onclick="event.stopPropagation()">
+                        <button onclick='addTrackToQueue(${JSON.stringify(track).replace(/'/g, "&apos;")})' class="px-3 py-1.5 bg-slate-800 text-xs rounded-lg text-slate-300 hover:bg-purple-600 hover:text-white transition-all">
+                            + Queue
+                        </button>
+                        <button onclick="removeFavorite('${track.videoId}')" class="text-slate-400 hover:text-rose-500 p-2 transition-colors">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function removeFavorite(videoId) {
+            playerState.favorites = playerState.favorites.filter(t => t.videoId !== videoId);
+            localStorage.setItem('aurastream_favorites', JSON.stringify(playerState.favorites));
+            renderFavorites();
+            updateFavoriteHeartUI();
+            showToast("Removed from Library");
+        }
+
+        // Custom direct URL importer
+        function loadDirectUrl() {
+            const urlInput = document.getElementById('direct-yt-url');
+            const url = urlInput.value.trim();
+            if (!url) return;
+
+            let videoId = "";
+            // Matches popular YouTube format variations
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+
+            if (match && match[2].length === 11) {
+                videoId = match[2];
+            } else {
+                showToast("Invalid YouTube URL");
+                return;
+            }
+
+            const track = {
+                title: "Direct Stream Track",
+                channel: "YouTube Importer",
+                videoId: videoId,
+                thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+            };
+
+            urlInput.value = "";
+            loadTrackToPlayer(track, true);
+            showToast("Direct link loaded!");
+        }
+
+        // Formatting time helper
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        // Tab Switching mechanics
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            // Set active navigation button colors
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-100 hover:bg-slate-800/50";
+            });
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) {
+                activeNav.className = "nav-btn w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 bg-purple-600/10 text-purple-400 border border-purple-500/10";
+            }
+        }
+
+        // Play/Pause button and Vinyl rotation synchronizer
+        function updatePlaybackControlsUI(isPlaying) {
+            const btn = document.getElementById('player-play-pause');
+            const vinyl = document.getElementById('player-thumb');
+            
+            if (isPlaying) {
+                btn.innerHTML = `<i class="fa-solid fa-pause text-lg"></i>`;
+                vinyl.classList.remove('animate-vinyl-paused');
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-play text-lg pl-0.5"></i>`;
+                vinyl.classList.add('animate-vinyl-paused');
+            }
+        }
+
+        function updateVolumeIcon() {
+            const icon = document.getElementById('volume-icon');
+            const vol = playerState.volume;
+
+            if (playerState.isMuted || vol === 0) {
+                icon.innerHTML = `<i class="fa-solid fa-volume-xmark"></i>`;
+            } else if (vol < 40) {
+                icon.innerHTML = `<i class="fa-solid fa-volume-low"></i>`;
+            } else {
+                icon.innerHTML = `<i class="fa-solid fa-volume-high"></i>`;
+            }
+        }
+
+        function initializeVolumeSlider() {
+            const slider = document.getElementById('volume-slider');
+            slider.value = playerState.volume;
+            updateVolumeIcon();
+        }
+
+        // Toggle Queue Column Panel
+        function toggleQueuePanel() {
+            const panel = document.getElementById('queue-panel');
+            panel.classList.toggle('hidden');
+        }
+
+        // Toggle Expand Video Frame size
+        function toggleVideoSize() {
+            const wrapper = document.getElementById('video-wrapper');
+            if (wrapper.classList.contains('aspect-video')) {
+                wrapper.classList.remove('aspect-video');
+                wrapper.style.height = "250px";
+            } else {
+                wrapper.classList.add('aspect-video');
+                wrapper.style.height = "";
+            }
+        }
+
+        // Show elegant visual notifications/toasts
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-28 right-6 bg-slate-900 border border-purple-500/30 text-white text-xs px-4 py-3 rounded-xl shadow-2xl z-50 transition-opacity duration-300 flex items-center gap-2 glow-purple";
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-purple-400 text-sm"></i> <span>${message}</span>`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+
+        // Toggle Mobile Side nav
+        function toggleMobileSidebar() {
+            const bar = document.getElementById('mobile-sidebar');
+            const overlay = document.getElementById('mobile-sidebar-overlay');
+            if (bar.classList.contains('-translate-x-full')) {
+                bar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                bar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
